@@ -1,3 +1,4 @@
+// jest.backend.config.js
 export default {
   // display name
   displayName: "backend",
@@ -5,12 +6,28 @@ export default {
   // when testing backend
   testEnvironment: "node",
 
-  // which test to run
-  testMatch: ["<rootDir>/controllers/*.test.js"],
+  // Path aliases for backend code
+  moduleNameMapper: {
+    '^@config/(.*)$': '<rootDir>/config/$1',
+    '^@controllers/(.*)$': '<rootDir>/controllers/$1',
+    '^@models/(.*)$': '<rootDir>/models/$1',
+    '^@routes/(.*)$': '<rootDir>/routes/$1',
+    '^@middlewares/(.*)$': '<rootDir>/middlewares/$1',
+    '^@helpers/(.*)$': '<rootDir>/helpers/$1'
+  },
 
-  // jest code coverage
+  // which test to run
+  testMatch: ['<rootDir>/tests/backend/**/*.test.js'],
+
+  // TODO: Check this
   collectCoverage: true,
-  collectCoverageFrom: ["controllers/**"],
+  collectCoverageFrom: [
+    'controllers/**/*.js',
+    'middlewares/**/*.js',
+    'helpers/**/*.js',
+    '!client/**'
+  ],
+  coveragePathIgnorePatterns: ['/node_modules/', '/client/'],
   coverageThreshold: {
     global: {
       lines: 100,

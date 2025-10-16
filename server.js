@@ -1,3 +1,4 @@
+import 'module-alias/register.js';
 import express from "express";
 import colors from "colors";
 import dotenv from "dotenv";
