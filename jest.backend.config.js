@@ -1,4 +1,3 @@
-// jest.backend.config.js
 export default {
   // display name
   displayName: "backend",
