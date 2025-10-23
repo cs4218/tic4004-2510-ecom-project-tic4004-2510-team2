@@ -97,11 +97,11 @@ describe('Login Component', () => {
     });
 
     const { getByPlaceholderText, getByText } = render(
-        <MemoryRouter initialEntries={['/login']}>
-            <Routes>
-                <Route path="/login" element={<Login />} />
-            </Routes>
-        </MemoryRouter>
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </MemoryRouter>
     );
 
     fireEvent.change(getByPlaceholderText('Enter Your Email'), { target: { value: 'test@example.com' } });

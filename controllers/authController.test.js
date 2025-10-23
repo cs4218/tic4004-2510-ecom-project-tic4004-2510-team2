@@ -1,7 +1,8 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import userModel from '../models/userModel.js';
-import { forgotPasswordController } from './authController.js';
+import { forgotPasswordController, loginController } from './authController.js';
 import { hashPassword, comparePassword } from '../helpers/authHelper.js';
+import jwt from 'jsonwebtoken';
 
 describe('forgotPasswordController', () => {
   const getRes = () => {
@@ -104,4 +105,135 @@ describe('forgotPasswordController', () => {
         })
     );
   });
+});
+
+/* Login Controller Tests */
+describe('loginController unit tests', () => {
+  const MockRes = () => {
+    const res = {};
+    res.status = jest.fn().mockReturnValue(res);
+    res.send = jest.fn().mockReturnValue(res);
+    return res;
+  };
+  
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // test case: email field is empty
+  it('should return 404 if email empty', async () => {
+    const req = { body: { email: '', password: 'password123' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.send).toHaveBeenCalledWith({ 
+      message: 'Invalid email or password',
+      success: false,
+     });
+  });
+
+  // test case: password field is empty
+  it('should return 404 if password empty', async () => {
+    const req = { body: { email: 'user@example.com', password: '' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.send).toHaveBeenCalledWith({ 
+      message: 'Invalid email or password',
+      success: false,
+     });
+  });
+
+  // test case: email not registered
+  it('should return 404 if email not registered', async () => {
+    jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
+    const req = { body: { email: 'user@example.com', password: 'password123' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.send).toHaveBeenCalledWith({ 
+      message: 'Email is not registerd',
+      success: false
+     });
+  });
+
+  // test case: correct email but wrong password
+  it('should return 200 if password does not match', async () => {
+    const hashedPassword = await hashPassword('correctPassword');
+    jest.spyOn(userModel, 'findOne').mockResolvedValue({ email: 'user@example.com', password: hashedPassword });
+    const req = { body: { email: 'user@example.com', password: 'wrongPassword' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      message: 'Invalid Password',
+      success: false
+    });
+  });
+
+  // test case: invalid token
+  it('should return 500 if token is invalid', async () => {
+    const hashedPassword = await hashPassword('correctPassword');
+    jest.spyOn(userModel, 'findOne').mockResolvedValue({ email: 'user@example.com', password: hashedPassword });
+    jest.spyOn(jwt, 'sign').mockImplementation(() => {
+      throw new Error('Invalid token');
+    });
+
+    const req = { body: { email: 'user@example.com', password: 'correctPassword' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({ 
+      message: 'Error in login',
+      success: false,
+      error: new Error('Invalid token'),
+    });
+  });
+
+  // test case: successful login
+  it('should return 200 and token on successful login', async () => {
+    const hashedPassword = await hashPassword('correctPassword');
+    jest.spyOn(userModel, 'findOne').mockResolvedValue({ 
+      _id: '1', 
+      name: 'Test User',
+      email: 'user@example.com', 
+      password: hashedPassword,
+      phone: '12345678',
+      address: '123 Test St',
+      role: 0,
+    });
+    jest.spyOn(jwt, 'sign').mockReturnValue('mocktoken');
+    const req = { body: { email: 'user@example.com', password: 'correctPassword' } };
+    const res = MockRes();
+
+    await loginController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: 'login successfully',
+        token: 'mocktoken',
+        user: expect.objectContaining({
+          _id: '1', 
+          name: 'Test User',
+          email: 'user@example.com',
+          phone: '12345678',
+          address: '123 Test St',
+          role: 0
+        })
+      })
+    );
+  });
+
 });
