@@ -4,22 +4,24 @@ import { forgotPasswordController, loginController } from './authController.js';
 import { hashPassword, comparePassword } from '../helpers/authHelper.js';
 import jwt from 'jsonwebtoken';
 
-describe('forgotPasswordController', () => {
-  const getRes = () => {
-    const res = {};
-    res.status = jest.fn().mockReturnValue(res);
-    res.send = jest.fn().mockReturnValue(res);
-    return res;
+const mockRes = () => {
+  return {
+    status: jest.fn().mockReturnThis(),
+    send: jest.fn().mockReturnThis(),
   };
-  const getReq = (body) => ({ body });
+};
 
+const mockReq = (body) => ({ body });
+
+describe('forgotPasswordController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   it('when email is missing then should return status 400 with correct error message', async () => {
-    const req = getReq({ answer: 'a1', newPassword: 'p1' });
-    const res = getRes();
+    const req = mockReq({});
+    const res = mockRes();
 
     await forgotPasswordController(req, res);
 
@@ -28,8 +30,8 @@ describe('forgotPasswordController', () => {
   });
 
   it('when answer is missing then should return status 400 with correct error message', async () => {
-    const req = getReq({ email: 'e@x.com', newPassword: 'p1' });
-    const res = getRes();
+    const req = mockReq({ email: 'test@email.com' });
+    const res = mockRes();
 
     await forgotPasswordController(req, res);
 
@@ -38,8 +40,8 @@ describe('forgotPasswordController', () => {
   });
 
   it('when newPassword is missing then should return status 400 with correct error message', async () => {
-    const req = getReq({ email: 'e@x.com', answer: 'a1' });
-    const res = getRes();
+    const req = mockReq({ email: 'test@email.com', answer: 'answer' });
+    const res = mockRes();
 
     await forgotPasswordController(req, res);
 
@@ -48,14 +50,14 @@ describe('forgotPasswordController', () => {
   });
 
   it('when user not found then should return 404 with correct error message', async () => {
-    const req = getReq({ email: 'e@x.com', answer: 'a1', newPassword: 'p1' });
-    const res = getRes();
+    const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
+    const res = mockRes();
 
     jest.spyOn(userModel, 'findOne').mockResolvedValueOnce(null);
 
     await forgotPasswordController(req, res);
 
-    expect(userModel.findOne).toHaveBeenCalledWith({ email: 'e@x.com', answer: 'a1' });
+    expect(userModel.findOne).toHaveBeenCalledWith({ email: 'test@email.com', answer: 'answer' });
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.send).toHaveBeenCalledWith({
       success: false,
@@ -64,21 +66,20 @@ describe('forgotPasswordController', () => {
   });
 
   it('when user found then should return 200 and update password', async () => {
-    const req = getReq({ email: 'e@x.com', answer: 'a1', newPassword: 'p1' });
-    const res = getRes();
+    const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
+    const res = mockRes();
 
     jest.spyOn(userModel, 'findOne').mockResolvedValueOnce({ _id: 'uid-123' });
     jest.spyOn(userModel, 'findByIdAndUpdate').mockResolvedValueOnce({});
-    jest.spyOn(console, 'log').mockImplementation(() => {}); // silence logs from controller
 
     await forgotPasswordController(req, res);
 
-    expect(userModel.findOne).toHaveBeenCalledWith({ email: 'e@x.com', answer: 'a1' });
+    expect(userModel.findOne).toHaveBeenCalledWith({ email: 'test@email.com', answer: 'answer' });
 
     const updateArgs = userModel.findByIdAndUpdate.mock.calls[0][1];
     const hashedPassword = updateArgs.password;
 
-    const match = await comparePassword('p1', hashedPassword);
+    const match = await comparePassword('newPassword', hashedPassword);
     expect(match).toBe(true);
 
     expect(res.status).toHaveBeenCalledWith(200);
@@ -88,12 +89,27 @@ describe('forgotPasswordController', () => {
     });
   });
 
-  it('when hashing fails then should return status 500 with correct error message', async () => {
-    const req = getReq({ email: 'e@x.com', answer: 'a1', newPassword: 'p1' });
-    const res = getRes();
+  it('when findOne throws error then should return status 500 with correct error message', async () => {
+    const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
+    const res = mockRes();
+    jest.spyOn(userModel, 'findOne').mockRejectedValueOnce(new Error('Some Error'));
 
+    await forgotPasswordController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Something went wrong',
+        })
+    );
+  });
+
+  it('when findByIdAndUpdate throws error then should return status 500 with correct error message', async () => {
+    const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
+    const res = mockRes();
     jest.spyOn(userModel, 'findOne').mockResolvedValueOnce({ _id: 'uid-123' });
-    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(userModel, 'findByIdAndUpdate').mockRejectedValueOnce(new Error('Some Error'));
 
     await forgotPasswordController(req, res);
 
@@ -109,21 +125,14 @@ describe('forgotPasswordController', () => {
 
 /* Login Controller Tests */
 describe('loginController unit tests', () => {
-  const MockRes = () => {
-    const res = {};
-    res.status = jest.fn().mockReturnValue(res);
-    res.send = jest.fn().mockReturnValue(res);
-    return res;
-  };
-  
   afterEach(() => {
     jest.clearAllMocks();
   });
 
   // test case: email field is empty
   it('should return 404 if email empty', async () => {
-    const req = { body: { email: '', password: 'password123' } };
-    const res = MockRes();
+    const req = mockReq({ email: '', password: 'password123' });
+    const res = mockRes();
 
     await loginController(req, res);
 
@@ -136,8 +145,8 @@ describe('loginController unit tests', () => {
 
   // test case: password field is empty
   it('should return 404 if password empty', async () => {
-    const req = { body: { email: 'user@example.com', password: '' } };
-    const res = MockRes();
+    const req = mockReq({ email: 'user@example.com', password: '' });
+    const res = mockRes();
 
     await loginController(req, res);
 
@@ -151,8 +160,8 @@ describe('loginController unit tests', () => {
   // test case: email not registered
   it('should return 404 if email not registered', async () => {
     jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
-    const req = { body: { email: 'user@example.com', password: 'password123' } };
-    const res = MockRes();
+    const req = mockReq({ email: 'user@example.com', password: 'password123' });
+    const res = mockRes();
 
     await loginController(req, res);
 
@@ -167,8 +176,8 @@ describe('loginController unit tests', () => {
   it('should return 200 if password does not match', async () => {
     const hashedPassword = await hashPassword('correctPassword');
     jest.spyOn(userModel, 'findOne').mockResolvedValue({ email: 'user@example.com', password: hashedPassword });
-    const req = { body: { email: 'user@example.com', password: 'wrongPassword' } };
-    const res = MockRes();
+    const req = mockReq({ email: 'user@example.com', password: 'wrongPassword' });
+    const res = mockRes();
 
     await loginController(req, res);
 
@@ -187,8 +196,8 @@ describe('loginController unit tests', () => {
       throw new Error('Invalid token');
     });
 
-    const req = { body: { email: 'user@example.com', password: 'correctPassword' } };
-    const res = MockRes();
+    const req = mockReq({ email: 'user@example.com', password: 'correctPassword' });
+    const res = mockRes();
 
     await loginController(req, res);
 
@@ -213,8 +222,8 @@ describe('loginController unit tests', () => {
       role: 0,
     });
     jest.spyOn(jwt, 'sign').mockReturnValue('mocktoken');
-    const req = { body: { email: 'user@example.com', password: 'correctPassword' } };
-    const res = MockRes();
+    const req = mockReq({ email: 'user@example.com', password: 'correctPassword' });
+    const res = mockRes();
 
     await loginController(req, res);
 
