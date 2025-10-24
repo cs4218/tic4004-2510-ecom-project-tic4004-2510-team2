@@ -1,6 +1,12 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import userModel from '../models/userModel.js';
-import { forgotPasswordController, loginController } from './authController.js';
+import orderModel from '../models/orderModel.js';
+import {
+  forgotPasswordController,
+  loginController,
+  getAllOrdersController,
+  orderStatusController
+} from './authController.js';
 import { hashPassword, comparePassword } from '../helpers/authHelper.js';
 import jwt from 'jsonwebtoken';
 
@@ -8,6 +14,7 @@ const mockRes = () => {
   return {
     status: jest.fn().mockReturnThis(),
     send: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
   };
 };
 
@@ -19,7 +26,7 @@ describe('forgotPasswordController', () => {
     jest.resetAllMocks();
   });
 
-  it('when email is missing then should return status 400 with correct error message', async () => {
+  it('should return status 400 with correct error message when email is missing', async () => {
     const req = mockReq({});
     const res = mockRes();
 
@@ -29,7 +36,7 @@ describe('forgotPasswordController', () => {
     expect(res.send).toHaveBeenCalledWith({ message: 'Email is required' });
   });
 
-  it('when answer is missing then should return status 400 with correct error message', async () => {
+  it('should return status 400 with correct error message when answer is missing', async () => {
     const req = mockReq({ email: 'test@email.com' });
     const res = mockRes();
 
@@ -39,7 +46,7 @@ describe('forgotPasswordController', () => {
     expect(res.send).toHaveBeenCalledWith({ message: 'answer is required' });
   });
 
-  it('when newPassword is missing then should return status 400 with correct error message', async () => {
+  it('should return status 400 with correct error message when newPassword is missing', async () => {
     const req = mockReq({ email: 'test@email.com', answer: 'answer' });
     const res = mockRes();
 
@@ -49,7 +56,7 @@ describe('forgotPasswordController', () => {
     expect(res.send).toHaveBeenCalledWith({ message: 'New Password is required' });
   });
 
-  it('when user not found then should return 404 with correct error message', async () => {
+  it('should return 404 with correct error message when user not found', async () => {
     const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
     const res = mockRes();
 
@@ -65,7 +72,7 @@ describe('forgotPasswordController', () => {
     });
   });
 
-  it('when user found then should return 200 and update password', async () => {
+  it('should return 200 and update password when user exists', async () => {
     const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
     const res = mockRes();
 
@@ -89,7 +96,7 @@ describe('forgotPasswordController', () => {
     });
   });
 
-  it('when findOne throws error then should return status 500 with correct error message', async () => {
+  it('should return status 500 with correct error message when findOne throws error', async () => {
     const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
     const res = mockRes();
     jest.spyOn(userModel, 'findOne').mockRejectedValueOnce(new Error('Some Error'));
@@ -105,7 +112,7 @@ describe('forgotPasswordController', () => {
     );
   });
 
-  it('when findByIdAndUpdate throws error then should return status 500 with correct error message', async () => {
+  it('should return status 500 with correct error message when findByIdAndUpdate throws error', async () => {
     const req = mockReq({ email: 'test@email.com', answer: 'answer', newPassword: 'newPassword' });
     const res = mockRes();
     jest.spyOn(userModel, 'findOne').mockResolvedValueOnce({ _id: 'uid-123' });
@@ -245,4 +252,117 @@ describe('loginController unit tests', () => {
     );
   });
 
+});
+
+describe('getAllOrdersController', () => {
+  // Equivalence Partitioning - either success or fail
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+  });
+
+  it('should return orders with correct populate and sort when orders exists', async () => {
+    const orders = [
+      { _id: 'o2', createdAt: '2024-01-01' },
+      { _id: 'o1', createdAt: '2024-02-01' },
+    ];
+    const chain = {
+      populate: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockResolvedValue(orders),
+    };
+    jest.spyOn(orderModel, 'find').mockReturnValue(chain);
+
+    const req = mockReq();
+    const res = mockRes();
+
+    await getAllOrdersController(req, res);
+
+    expect(orderModel.find).toHaveBeenCalledWith({});
+    expect(chain.populate).toHaveBeenNthCalledWith(1, 'products', '-photo');
+    expect(chain.populate).toHaveBeenNthCalledWith(2, 'buyer', 'name');
+    expect(chain.sort).toHaveBeenCalledWith({ createdAt: -1 });
+    expect(res.json).toHaveBeenCalledWith(orders);
+  });
+
+  it('should respond 500 with correct message when db throws error', async () => {
+    jest.spyOn(orderModel, 'find').mockImplementation(() => { throw new Error('Some Error'); });
+
+    const req = mockReq();
+    const res = mockRes();
+
+    await getAllOrdersController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        message: 'Error WHile Geting Orders',
+        error: new Error('Some Error')
+      })
+    );
+  });
+});
+
+describe('orderStatusController', () => {
+  // Equivalence partitioning - order found, order not found, db error
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+  });
+
+  it('should return updated order when order is found', async () => {
+    const updatedOrder = { id: '123', status: 'Shipped' };
+    jest.spyOn(orderModel, 'findByIdAndUpdate').mockResolvedValue(updatedOrder);
+
+    const req = {
+      body: { status: 'Shipped' },
+      params: { orderId: '123' },
+    };
+    const res = mockRes();
+
+    await orderStatusController(req, res);
+
+    expect(orderModel.findByIdAndUpdate).toHaveBeenCalledWith(
+        '123',
+        { status: 'Shipped' },
+        { new: true }
+    );
+    expect(res.json).toHaveBeenCalledWith(updatedOrder);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('should return null when order not found', async () => {
+    jest.spyOn(orderModel, 'findByIdAndUpdate').mockResolvedValue(null);
+
+    const req = {
+      body: { status: 'Shipped' },
+      params: { orderId: '123' },
+    };
+    const res = mockRes();
+
+    await orderStatusController(req, res);
+
+    expect(res.json).toHaveBeenCalledWith(null);
+  });
+
+  it('should return 500 when db throws an error', async () => {
+    jest.spyOn(orderModel, 'findByIdAndUpdate').mockRejectedValue(new Error('Some Error'));
+
+    const req = {
+      body: { status: 'Shipped' },
+      params: { orderId: '123' },
+    };
+    const res = mockRes();
+
+    await orderStatusController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Error While Updateing Order',
+          error: new Error('Some Error'),
+        })
+    );
+  });
 });
