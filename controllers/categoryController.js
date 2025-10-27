@@ -19,7 +19,7 @@ export const createCategoryController = async (req, res) => {
     }).save();
     res.status(201).send({
       success: true,
-      message: "New category created successfully",
+      message: "Category created successfully",
       category,
     });
   } catch (error) {
@@ -44,7 +44,7 @@ export const updateCategoryController = async (req, res) => {
     );
     res.status(200).send({
       success: true,
-      messsage: "Category Updated Successfully",
+      message: "Category updated successfully",
       category,
     });
   } catch (error) {
@@ -63,7 +63,7 @@ export const categoryControlller = async (req, res) => {
     const category = await categoryModel.find({});
     res.status(200).send({
       success: true,
-      message: "All Categories List",
+      message: "All categories listed",
       category,
     });
   } catch (error) {
@@ -82,7 +82,7 @@ export const singleCategoryController = async (req, res) => {
     const category = await categoryModel.findOne({ slug: req.params.slug });
     res.status(200).send({
       success: true,
-      message: "Get Single Category Successfully",
+      message: "Get single category successfully",
       category,
     });
   } catch (error) {
@@ -90,7 +90,7 @@ export const singleCategoryController = async (req, res) => {
     res.status(500).send({
       success: false,
       error,
-      message: "Error While getting Single Category",
+      message: "Error while getting single category",
     });
   }
 };
@@ -102,13 +102,13 @@ export const deleteCategoryCOntroller = async (req, res) => {
     await categoryModel.findByIdAndDelete(id);
     res.status(200).send({
       success: true,
-      message: "Categry Deleted Successfully",
+      message: "Category deleted successfully",
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "error while deleting category",
+      message: "Error while deleting category",
       error,
     });
   }
