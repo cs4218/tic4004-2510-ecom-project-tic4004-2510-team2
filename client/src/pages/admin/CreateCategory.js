@@ -12,23 +12,37 @@ const CreateCategory = () => {
   const [selected, setSelected] = useState(null);
   const [updatedName, setUpdatedName] = useState("");
   //handle Form
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const { data } = await axios.post("/api/v1/category/create-category", {
-        name,
-      });
-      if (data?.success) {
-        toast.success(`${name} is created`);
-        getAllCategory();
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.log(error);
-      toast.error("somthing went wrong in input form");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await axios.post("/api/v1/category/create-category", { name });
+    const { data } = response;
+
+    if (response.status === 201 && data.success) {
+      toast.success(data?.message || `${name} is created`);
+      getAllCategory();
+    } else {
+      // Any other 2xx response that is not a creation
+      toast.error(data?.message || "Unexpected response from server");
     }
-  };
+  } catch (error) {
+    // Axios error object has response if server responded with non-2xx status
+    if (error.response) {
+      const { status, data } = error.response;
+      if (status === 409) {
+        toast.error(data?.message || `Category "${name}" already exists`);
+      } else {
+        toast.error(data?.message || "Something went wrong on the server");
+      }
+    } else {
+      // Network or other errors
+      toast.error("Something went wrong in input form");
+    }
+    console.log(error);
+  }
+};
+
+
 
   //get all cat
   const getAllCategory = async () => {
@@ -39,7 +53,8 @@ const CreateCategory = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something wwent wrong in getting catgeory");
+      // Prefer server message
+      toast.error(error?.response?.data?.message || "Something went wrong in getting category");
     }
   };
 
@@ -56,7 +71,8 @@ const CreateCategory = () => {
         { name: updatedName }
       );
       if (data.success) {
-        toast.success(`${updatedName} is updated`);
+        // Prefer server message
+        toast.success(data?.message || `${updatedName} is updated`);
         setSelected(null);
         setUpdatedName("");
         setVisible(false);
@@ -65,7 +81,8 @@ const CreateCategory = () => {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error("Somtihing went wrong");
+        const msg = error?.response?.data?.message || "Something went wrong";
+        toast.error(msg);
     }
   };
   //delete category
@@ -75,14 +92,15 @@ const CreateCategory = () => {
         `/api/v1/category/delete-category/${pId}`
       );
       if (data.success) {
-        toast.success(`category is deleted`);
+        toast.success(data?.message || `category is deleted`);
 
         getAllCategory();
       } else {
         toast.error(data.message);
       }
     } catch (error) {
-      toast.error("Somtihing went wrong");
+        const msg = error?.response?.data?.message || "Something went wrong";
+        toast.error(msg);
     }
   };
   return (
@@ -111,9 +129,8 @@ const CreateCategory = () => {
                 </thead>
                 <tbody>
                   {categories?.map((c) => (
-                    <>
-                      <tr>
-                        <td key={c._id}>{c.name}</td>
+                      <tr key={c._id}>
+                        <td>{c.name}</td>
                         <td>
                           <button
                             className="btn btn-primary ms-2"
@@ -135,7 +152,6 @@ const CreateCategory = () => {
                           </button>
                         </td>
                       </tr>
-                    </>
                   ))}
                 </tbody>
               </table>
@@ -143,7 +159,7 @@ const CreateCategory = () => {
             <Modal
               onCancel={() => setVisible(false)}
               footer={null}
-              visible={visible}
+              open={visible}
             >
               <CategoryForm
                 value={updatedName}
