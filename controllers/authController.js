@@ -9,34 +9,39 @@ export const registerController = async (req, res) => {
     const { name, email, password, phone, address, answer } = req.body;
     //validations
     if (!name) {
-      return res.send({ error: "Name is Required" });
+      return res.status(400).send({ message: "Name is required" });
     }
     if (!email) {
-      return res.send({ message: "Email is Required" });
+      return res.status(400).send({ message: "Email is required" });
     }
     if (!password) {
-      return res.send({ message: "Password is Required" });
+      return res.status(400).send({ message: "Password is required" });
     }
     if (!phone) {
-      return res.send({ message: "Phone no is Required" });
+      return res.status(400).send({ message: "Phone number is required" });
     }
     if (!address) {
-      return res.send({ message: "Address is Required" });
+      return res.status(400).send({ message: "Address is required" });
     }
     if (!answer) {
-      return res.send({ message: "Answer is Required" });
+      return res.status(400).send({ message: "Answer is required" });
     }
+
     //check user
-    const exisitingUser = await userModel.findOne({ email });
-    //exisiting user
-    if (exisitingUser) {
-      return res.status(200).send({
+    const emailLower = email.toLowerCase();
+    const existingUser = await userModel.findOne({ email: emailLower });
+
+    //existing user
+    if (existingUser) {
+      return res.status(409).send({
         success: false,
-        message: "Already Register please login",
+        message: "Already registered, please login",
       });
     }
+
     //register user
     const hashedPassword = await hashPassword(password);
+
     //save
     const user = await new userModel({
       name,
@@ -47,16 +52,16 @@ export const registerController = async (req, res) => {
       answer,
     }).save();
 
-    res.status(201).send({
+    res.status(200).send({
       success: true,
-      message: "User Register Successfully",
+      message: "User Registered Successfully",
       user,
     });
   } catch (error) {
     console.log(error);
     res.status(500).send({
       success: false,
-      message: "Errro in Registeration",
+      message: "Error in Registration",
       error,
     });
   }
