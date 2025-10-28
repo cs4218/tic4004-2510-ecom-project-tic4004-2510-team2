@@ -376,50 +376,56 @@ describe('registerController unit tests', () => {
   });
 
   test.each([
-    [ { 
+    [ 'name',
+      { 
         email: 'user@example.com', 
         password: 'password123', 
         phone: '12345678',
         address: '123 Test St',
         answer:'Test Answer'
       }, { message: "Name is required" }],
-    [ {
+    [ 'email',
+      {
         name: 'Test User', 
         password: 'password123', 
         phone: '12345678',
         address: '123 Test St',
         answer:'Test Answer'
       }, { message: "Email is required" }],
-    [ {
+    [ 'password',
+      {
         name: 'Test User', 
         email: 'user@example.com', 
         phone: '12345678',
         address: '123 Test St',
         answer:'Test Answer'
       }, { message: "Password is required" }],
-    [ {
+    [ 'phone number',
+      {
         name: 'Test User', 
         email: 'user@example.com', 
         password: 'password123',
         address: '123 Test St',
         answer:'Test Answer'
       }, { message: "Phone number is required" }],
-    [ {
+    [ 'address',
+      {
         name: 'Test User', 
         email: 'user@example.com', 
         password: 'password123', 
         phone: '12345678',
         answer:'Test Answer'
       }, { message: "Address is required" }],
-    [ {
+    [ 'answer',
+      {
         name: 'Test User', 
         email: 'user@example.com', 
         password: 'password123', 
         phone: '12345678',
         address: '123 Test St'
       }, { message: "Answer is required" }],
-  ])('should return 400 if required field is missing %#', async (inputData, expectedError) => {
-    const req = mockReq(inputData);
+  ])('should return 400 if %s is missing', async (field, body, expectedError) => {
+    const req = mockReq(body);
     const res = mockRes();
 
     await registerController(req, res);
