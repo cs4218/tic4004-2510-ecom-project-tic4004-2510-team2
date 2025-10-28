@@ -5,7 +5,8 @@ import {
   forgotPasswordController,
   loginController,
   getAllOrdersController,
-  orderStatusController
+  orderStatusController,
+  registerController
 } from './authController.js';
 import { hashPassword, comparePassword } from '../helpers/authHelper.js';
 import jwt from 'jsonwebtoken';
@@ -365,4 +366,134 @@ describe('orderStatusController', () => {
         })
     );
   });
+});
+
+/* Register Controller Tests */
+describe('registerController unit tests', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+    jest.resetAllMocks();
+  });
+
+  test.each([
+    [ { 
+        email: 'user@example.com', 
+        password: 'password123', 
+        phone: '12345678',
+        address: '123 Test St',
+        answer:'Test Answer'
+      }, { message: "Name is required" }],
+    [ {
+        name: 'Test User', 
+        password: 'password123', 
+        phone: '12345678',
+        address: '123 Test St',
+        answer:'Test Answer'
+      }, { message: "Email is required" }],
+    [ {
+        name: 'Test User', 
+        email: 'user@example.com', 
+        phone: '12345678',
+        address: '123 Test St',
+        answer:'Test Answer'
+      }, { message: "Password is required" }],
+    [ {
+        name: 'Test User', 
+        email: 'user@example.com', 
+        password: 'password123',
+        address: '123 Test St',
+        answer:'Test Answer'
+      }, { message: "Phone number is required" }],
+    [ {
+        name: 'Test User', 
+        email: 'user@example.com', 
+        password: 'password123', 
+        phone: '12345678',
+        answer:'Test Answer'
+      }, { message: "Address is required" }],
+    [ {
+        name: 'Test User', 
+        email: 'user@example.com', 
+        password: 'password123', 
+        phone: '12345678',
+        address: '123 Test St'
+      }, { message: "Answer is required" }],
+  ])('should return 400 if required field is missing %#', async (inputData, expectedError) => {
+    const req = mockReq(inputData);
+    const res = mockRes();
+
+    await registerController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.send).toHaveBeenCalledWith(expectedError);
+  });
+
+  it('should return 409 if user already exists', async () => {
+    const mockDB = new Map([['user@example.com', { email: 'user@example.com' }]]);
+
+    jest.spyOn(userModel, 'findOne').mockImplementation(async ( query ) => {
+      const email = query?.email;
+      return mockDB.get(email) || null;
+    });
+
+    const req = mockReq({
+      name: 'Test User',
+      email: 'User@example.com',
+      password: 'password123',
+      phone: '12345678',
+      address: '123 Test St',
+      answer: 'Test Answer'
+    });
+    const res = mockRes();
+
+    await registerController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Already registered, please login"
+    });
+  });
+
+  it('should return 200 and user data on successful registration', async () => {
+    const req = mockReq({
+      name: 'Test User',
+      email: 'user@example.com',
+      password: 'password123',
+      phone: '12345678',
+      address: '123 Test St',
+      answer: 'Test Answer'
+    });
+    const res = mockRes();
+    jest.spyOn(userModel, 'findOne').mockResolvedValueOnce(null);
+    jest.spyOn(userModel.prototype, 'save').mockResolvedValueOnce({
+      _id: '1',
+      name: 'Test User',
+      email: 'user@example.com',
+      password: 'password123',
+      phone: '12345678',
+      address: '123 Test St',
+      answer: 'Test Answer',
+      role: 0
+    });
+
+    await registerController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "User Registered Successfully",
+      user: expect.objectContaining({
+        _id: expect.any(String),
+        name: 'Test User',
+        email: 'user@example.com',
+        phone: '12345678',
+        address: '123 Test St',
+        password: 'password123',
+        answer: 'Test Answer',
+        role: 0
+      })
+    });
+  });
+
 });
