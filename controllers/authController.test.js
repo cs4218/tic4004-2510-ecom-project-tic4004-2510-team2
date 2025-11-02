@@ -6,7 +6,8 @@ import {
   loginController,
   getAllOrdersController,
   orderStatusController,
-  registerController
+  registerController,
+  updateProfileController
 } from './authController.js';
 import { hashPassword, comparePassword } from '../helpers/authHelper.js';
 import jwt from 'jsonwebtoken';
@@ -499,6 +500,120 @@ describe('registerController unit tests', () => {
         answer: 'Test Answer',
         role: 0
       })
+    });
+  });
+
+});
+
+/* Update Profile Controller Tests */
+describe('updateProfileController unit tests', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return 400 if password is less than 6 characters', async () => {
+    const req = {
+      user: { _id: 'user-id' },
+      body: {
+        name: 'Test User',
+        email: 'user@example.com',
+        password: '123',
+        phone: '12345678',
+        address: '123 Test St',
+      },
+    };
+    const res = mockRes();
+
+    jest.spyOn(userModel, 'findById').mockResolvedValueOnce({
+      _id: 'user-id',
+      name: 'Test User',
+      password: 'oldpassword',
+      phone: '12345678',
+      address: '123 Test St',
+    });
+
+    await updateProfileController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      success: false,
+      error: "Password is required and 6 characters long"
+    });
+  });
+
+  it('should return 400 if findById throws error', async () => {
+    const req = {
+      user: { _id: 'user-id' },
+      body: {
+        name: 'Test User',
+        email: 'user@example.com',
+        password: 'password123',
+        phone: '12345678',
+        address: '123 Test St',
+      },
+    };
+    const res = mockRes();
+
+    jest.spyOn(userModel, 'findById').mockRejectedValueOnce(new Error('DB error'));
+
+    await updateProfileController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Error While Update Profile",
+      error: expect.any(Error),
+    });
+  });
+
+  it('should return 200 and updated user on successful update', async () => {
+    const req = {
+      user: { _id: 'user-id' },
+      body: {
+        name: 'Updated User',
+        email: 'user@example.com',
+        password: 'password123',
+        phone: '87654321',
+        address: '321 Test St',
+      },
+    };
+    const res = mockRes();
+
+    const existingUser = {
+      _id: 'user-id',
+      name: 'Old User',
+      password: 'oldpassword',
+      phone: '12345678',
+      address: 'Old Address',
+    };
+    jest.spyOn(userModel, 'findById').mockResolvedValueOnce(existingUser);
+
+    const hashedPassword = await hashPassword('password123');
+
+    const updatedUser = {
+      _id: 'user-id',
+      name: 'Updated User',
+      email: 'user@example.com',
+      password: hashedPassword,
+      phone: '87654321',
+      address: '321 Test St',
+    };
+    jest.spyOn(userModel, 'findByIdAndUpdate').mockResolvedValueOnce(updatedUser);
+
+    await updateProfileController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.send).toHaveBeenCalledWith({
+      success: true,
+      message: "Profile Updated Successfully",
+      updatedUser: expect.objectContaining({
+        _id: 'user-id',
+        name: 'Updated User',
+        email: 'user@example.com',
+        password: hashedPassword,
+        phone: '87654321',
+        address: '321 Test St',
+      }),
     });
   });
 
