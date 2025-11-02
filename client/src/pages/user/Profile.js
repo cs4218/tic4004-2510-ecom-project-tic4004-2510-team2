@@ -16,11 +16,14 @@ const Profile = () => {
 
   //get user data
   useEffect(() => {
-    const { email, name, phone, address } = auth?.user;
-    setName(name);
-    setPhone(phone);
-    setEmail(email);
-    setAddress(address);
+    // guard in case auth or auth.user is undefined (prevents destructuring from undefined)
+    if (auth && auth.user) {
+      const { email: userEmail, name: userName, phone: userPhone, address: userAddress } = auth.user;
+      setName(userName || "");
+      setPhone(userPhone || "");
+      setEmail(userEmail || "");
+      setAddress(userAddress || "");
+    }
   }, [auth?.user]);
 
   // form function
@@ -34,14 +37,31 @@ const Profile = () => {
         phone,
         address,
       });
-      if (data?.errro) {
+      if (data?.error) {
         toast.error(data?.error);
       } else {
         setAuth({ ...auth, user: data?.updatedUser });
-        let ls = localStorage.getItem("auth");
-        ls = JSON.parse(ls);
-        ls.user = data.updatedUser;
-        localStorage.setItem("auth", JSON.stringify(ls));
+        // update localStorage safely (guard against missing or corrupted stored data)
+        try {
+          let ls = localStorage.getItem("auth");
+          if (ls) {
+            ls = JSON.parse(ls);
+            ls.user = data.updatedUser;
+            localStorage.setItem("auth", JSON.stringify(ls));
+          } else {
+            // no existing auth in localStorage — create a minimal one
+            localStorage.setItem(
+              "auth",
+              JSON.stringify({ user: data.updatedUser, token: auth?.token || "" })
+            );
+          }
+        } catch (err) {
+          // if parsing fails, replace localStorage entry with the updated user
+          localStorage.setItem(
+            "auth",
+            JSON.stringify({ user: data.updatedUser, token: auth?.token || "" })
+          );
+        }
         toast.success("Profile Updated Successfully");
       }
     } catch (error) {
