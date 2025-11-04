@@ -9,6 +9,7 @@ import { useAuth } from "../../context/auth";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [auth, setAuth] = useAuth();
   
 
@@ -25,6 +26,7 @@ const Login = () => {
         password,
       });
       if (res && res.data.success) {
+        setError("");
         toast.success(res.data && res.data.message, {
             duration: 5000,
             icon: "🙏",
@@ -41,10 +43,12 @@ const Login = () => {
         localStorage.setItem("auth", JSON.stringify(res.data));
         navigate(location.state || "/");
       } else {
+        setError(res.data.message || 'Login failed');
         toast.error(res.data.message);
       }
     } catch (error) {
       console.log(error);
+      setError('Something went wrong');
       toast.error("Something went wrong");
     }
   };
@@ -55,6 +59,7 @@ const Login = () => {
           <h4 className="title">LOGIN FORM</h4>
 
           <div className="mb-3">
+            {error && <div data-testid="alert-error" className="alert alert-danger">{error}</div>}
             <input
               type="email"
               autoFocus
