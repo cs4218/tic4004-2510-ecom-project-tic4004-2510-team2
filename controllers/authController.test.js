@@ -503,6 +503,30 @@ describe('registerController unit tests', () => {
     });
   });
 
+  it('should return 500 if error occurs during registration', async () => {
+    const req = mockReq({
+      name: 'Test User',
+      email: 'user@example.com',
+      password: 'password123',
+      phone: '12345678',
+      address: '123 Test St',
+      answer: 'Test Answer'
+    });
+    const res = mockRes();
+
+    jest.spyOn(userModel, 'findOne').mockResolvedValueOnce(null);
+    jest.spyOn(userModel.prototype, 'save').mockRejectedValueOnce(new Error('DB error'));
+
+    await registerController(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.send).toHaveBeenCalledWith({
+      success: false,
+      message: "Error in Registration",
+      error: expect.any(Error),
+    });
+  });
+
 });
 
 /* Update Profile Controller Tests */

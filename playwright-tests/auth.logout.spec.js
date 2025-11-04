@@ -19,11 +19,11 @@ test.describe('User Logout', () => {
     await page.goto('http://localhost:3000/');
     await expect(page.getByRole('button', { name: /test user/i })).toHaveText(/test user/i);
 
-  // click logout: open dropdown, wait for logout link to be visible, then click
-  await page.getByRole('button', { name: /test user/i }).click();
-  const logout = page.getByRole('link', { name: /logout/i });
-  await expect(logout).toBeVisible();
-  await logout.click();
+    // click logout: open dropdown, wait for logout link to be visible, then click
+    await page.getByRole('button', { name: /test user/i }).click();
+    const logout = page.getByRole('link', { name: /logout/i });
+    await expect(logout).toBeVisible();
+    await logout.click();
 
     // assert logged-out UI
     await expect(page).toHaveURL('http://localhost:3000/login');
