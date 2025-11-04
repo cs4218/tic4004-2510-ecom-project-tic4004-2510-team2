@@ -1,6 +1,10 @@
 import { test, expect} from '@playwright/test';
 
 test.describe('User Logout', () => {
+  // test.beforeEach(async ({ page }) => {
+  //   await page.addInitScript(() => localStorage.clear());
+  // });
+
   test('clears session and UI on logout', async ({ page }) => {
     // stub login state
     await page.addInitScript(() => {

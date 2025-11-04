@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('User Registration', () => {
+  // test.beforeEach(async ({ page }) => {
+  //   await page.addInitScript(() => localStorage.clear());
+  // });
+
   test('registers successfully', async ({ page }) => {
     // stub backend
     await page.route('**/api/v1/auth/register', async route => {
