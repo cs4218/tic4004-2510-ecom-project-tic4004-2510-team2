@@ -14,7 +14,8 @@ export default {
     '<rootDir>/models/**/*.test.js',
     '<rootDir>/routes/**/*.test.js',
   ],
-
+  verbose: true,
+  silent: true,
   // TODO: Check this
   // collectCoverage: false,
   // collectCoverageFrom: [
