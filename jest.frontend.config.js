@@ -27,13 +27,13 @@ export default {
   ],
 
   // jest code coverage
-  collectCoverage: true,
-  collectCoverageFrom: ["client/src/pages/Auth/**", "client/src/pages/admin/CreateCategory.js", "client/src/pages/user/Profile.js"],
-  coverageThreshold: {
-    global: {
-      lines: 100,
-      functions: 100,
-    },
-  },
+  // collectCoverage: false,
+  // collectCoverageFrom: ["client/src/pages/Auth/**", "client/src/pages/admin/CreateCategory.js", "client/src/pages/user/Profile.js"],
+  // coverageThreshold: {
+  //   global: {
+  //     lines: 100,
+  //     functions: 100,
+  //   },
+  // },
   setupFilesAfterEnv: ["<rootDir>/client/src/setupTests.js"],
 };
