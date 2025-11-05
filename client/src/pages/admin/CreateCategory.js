@@ -36,7 +36,7 @@ const handleSubmit = async (e) => {
       }
     } else {
       // Network or other errors
-      toast.error("Something went wrong in input form");
+      toast.error(error.message || "Something went wrong in input form");
     }
     console.log(error);
   }
