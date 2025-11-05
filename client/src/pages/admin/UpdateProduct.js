@@ -51,7 +51,7 @@ const UpdateProduct = () => {
       }
     } catch (error) {
       console.log(error);
-      toast.error("Something wwent wrong in getting catgeory");
+      toast.error("Something wwent wrong in getting category");
     }
   };
 
@@ -59,7 +59,7 @@ const UpdateProduct = () => {
     getAllCategory();
   }, []);
 
-  //create product function
+  //update product function
   const handleUpdate = async (e) => {
     e.preventDefault();
     try {
@@ -70,35 +70,60 @@ const UpdateProduct = () => {
       productData.append("quantity", quantity);
       photo && productData.append("photo", photo);
       productData.append("category", category);
-      const { data } = axios.put(
+      productData.append("shipping", shipping);
+      const { data } = await axios.put(
         `/api/v1/product/update-product/${id}`,
         productData
       );
       if (data?.success) {
-        toast.error(data?.message);
+        toast.success("Product updated successfully");
+        setTimeout(() => {
+          navigate("/dashboard/admin/products");
+        }, 1000);
       } else {
-        toast.success("Product Updated Successfully");
-        navigate("/dashboard/admin/products");
+        toast.error(data?.message);
+        setTimeout(() => {
+          navigate("/dashboard/admin/products");
+        }, 1000);
       }
     } catch (error) {
       console.log(error);
-      toast.error("something went wrong");
+      if (error.response && error.response.status === 413) {
+        toast.error("Photo size should be less than 1MB");
+      } else if (error.response && error.response.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error("Something went wrong");
+      }
     }
   };
 
   //delete a product
   const handleDelete = async () => {
     try {
-      let answer = window.prompt("Are You Sure want to delete this product ? ");
-      if (!answer) return;
+      let answer = window.prompt("Are You Sure want to delete this product? Type YES to confirm");
+      if (answer !== "YES") return;
       const { data } = await axios.delete(
         `/api/v1/product/delete-product/${id}`
       );
-      toast.success("Product DEleted Succfully");
-      navigate("/dashboard/admin/products");
+      if (data?.success) {
+        toast.success("Product deleted successfully");
+        setTimeout(() => {
+          navigate("/dashboard/admin/products");
+        }, 1000);
+      } else {
+        toast.error(data?.message);
+        setTimeout(() => {
+          navigate("/dashboard/admin/products");
+        }, 1000);
+      }
     } catch (error) {
       console.log(error);
-      toast.error("Something went wrong");
+      if (error.response && error.response.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error("Something went wrong");
+      }
     }
   };
   return (
@@ -184,7 +209,7 @@ const UpdateProduct = () => {
                 <input
                   type="number"
                   value={price}
-                  placeholder="write a Price"
+                  placeholder="write a price"
                   className="form-control"
                   onChange={(e) => setPrice(e.target.value)}
                 />
@@ -201,7 +226,7 @@ const UpdateProduct = () => {
               <div className="mb-3">
                 <Select
                   bordered={false}
-                  placeholder="Select Shipping "
+                  placeholder="Select shipping"
                   size="large"
                   showSearch
                   className="form-select mb-3"
