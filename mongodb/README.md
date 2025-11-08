@@ -2,6 +2,12 @@
 ## Migration plan
 As we are doing performance test on cloud db, we will face limitation as we are using free tier. With a local version of mongodb instance, this can be resolved.
 
+### Start db instance
+```shell
+cd mongodb
+docker compose up -d
+```
+
 ### Dump your existing data using mongodump utility
 ```shell
 mongodump --uri="mongodb+srv://db_admin:xxx@tic4004-cluster.gkmipra.mongodb.net/"
